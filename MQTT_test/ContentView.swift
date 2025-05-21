@@ -11,15 +11,18 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
-
+    
+    @StateObject private var mqttClient = MQTT.shared
+    
     var body: some View {
         NavigationSplitView {
             List {
                 ForEach(items) { item in
                     NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                        Text("\(item.msg)")
+                        
                     } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                        Text("\(item.msg)")
                     }
                 }
                 .onDelete(perform: deleteItems)
@@ -29,23 +32,55 @@ struct ContentView: View {
                     EditButton()
                 }
                 ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                    Button(action: send) {
+                        Label("send", systemImage: "plus")
                     }
+                }
+                ToolbarItem {
+                    // sync button
+                    Button(action: sync) {
+                        Label("sync", systemImage: "arrow.clockwise")
+                    }
+                }
+            }
+            .onChange(of: mqttClient.receivedMessage) { _, newValue in
+                print("New value: \(newValue)")
+                withAnimation {
+                    let newItem = Item(msg: newValue)
+                    modelContext.insert(newItem)
                 }
             }
         } detail: {
             Text("Select an item")
         }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+        .onAppear() {
+            mqttClient.connect()
+        }
+        .onDisappear() {
+            mqttClient.disconnect()
         }
     }
-
+    
+    private func send() {
+        withAnimation {
+            do {
+                try mqttClient.publish(message: "hello")
+            } catch {
+                print("Error publishing message: \(error)")
+            }
+        }
+    }
+    
+    private func sync() {
+        Task {
+            do {
+                try await mqttClient.subscribe()
+            } catch {
+                print("Error subscribing: \(error)")
+            }
+        }
+    }
+    
     private func deleteItems(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
@@ -55,7 +90,7 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
-}
+//#Preview {
+//    ContentView()
+//        .modelContainer(for: Item.self, inMemory: true)
+//}

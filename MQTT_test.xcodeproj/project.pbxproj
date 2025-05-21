@@ -3,8 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 90;
 	objects = {
+
+/* Begin PBXBuildFile section */
+		C178745F2DDDB9E70034BF31 /* MQTTNIO in Frameworks */ = {isa = PBXBuildFile; productRef = C178745E2DDDB9E70034BF31 /* MQTTNIO */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		C17874482DDDB1980034BF31 /* MQTT_test.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MQTT_test.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -21,10 +25,9 @@
 /* Begin PBXFrameworksBuildPhase section */
 		C17874452DDDB1980034BF31 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
+				C178745F2DDDB9E70034BF31 /* MQTTNIO in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -58,13 +61,12 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				C178744A2DDDB1980034BF31 /* MQTT_test */,
 			);
 			name = MQTT_test;
 			packageProductDependencies = (
+				C178745E2DDDB9E70034BF31 /* MQTTNIO */,
 			);
 			productName = MQTT_test;
 			productReference = C17874482DDDB1980034BF31 /* MQTT_test.app */;
@@ -94,7 +96,10 @@
 			);
 			mainGroup = C178743F2DDDB1980034BF31;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				C178745D2DDDB9E70034BF31 /* XCRemoteSwiftPackageReference "mqtt-nio" */,
+			);
+			preferredProjectObjectVersion = 90;
 			productRefGroup = C17874492DDDB1980034BF31 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -107,25 +112,21 @@
 /* Begin PBXResourcesBuildPhase section */
 		C17874462DDDB1980034BF31 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C17874442DDDB1980034BF31 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		C17874532DDDB19A0034BF31 /* Debug */ = {
+		C17874532DDDB19A0034BF31 /* Debug configuration for PBXProject "MQTT_test" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -186,10 +187,12 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_MEMORY_SAFETY = NO;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
-		C17874542DDDB19A0034BF31 /* Release */ = {
+		C17874542DDDB19A0034BF31 /* Release configuration for PBXProject "MQTT_test" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -242,11 +245,13 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_MEMORY_SAFETY = NO;
+				SWIFT_VERSION = 6.0;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		C17874562DDDB19A0034BF31 /* Debug */ = {
+		C17874562DDDB19A0034BF31 /* Debug configuration for PBXNativeTarget "MQTT_test" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -274,7 +279,7 @@
 			};
 			name = Debug;
 		};
-		C17874572DDDB19A0034BF31 /* Release */ = {
+		C17874572DDDB19A0034BF31 /* Release configuration for PBXNativeTarget "MQTT_test" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -308,22 +313,39 @@
 		C17874432DDDB1980034BF31 /* Build configuration list for PBXProject "MQTT_test" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C17874532DDDB19A0034BF31 /* Debug */,
-				C17874542DDDB19A0034BF31 /* Release */,
+				C17874532DDDB19A0034BF31 /* Debug configuration for PBXProject "MQTT_test" */,
+				C17874542DDDB19A0034BF31 /* Release configuration for PBXProject "MQTT_test" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		C17874552DDDB19A0034BF31 /* Build configuration list for PBXNativeTarget "MQTT_test" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C17874562DDDB19A0034BF31 /* Debug */,
-				C17874572DDDB19A0034BF31 /* Release */,
+				C17874562DDDB19A0034BF31 /* Debug configuration for PBXNativeTarget "MQTT_test" */,
+				C17874572DDDB19A0034BF31 /* Release configuration for PBXNativeTarget "MQTT_test" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C178745D2DDDB9E70034BF31 /* XCRemoteSwiftPackageReference "mqtt-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/swift-server-community/mqtt-nio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.12.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C178745E2DDDB9E70034BF31 /* MQTTNIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C178745D2DDDB9E70034BF31 /* XCRemoteSwiftPackageReference "mqtt-nio" */;
+			productName = MQTTNIO;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C17874402DDDB1980034BF31 /* Project object */;
 }
