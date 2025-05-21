@@ -53,10 +53,11 @@ else
 fi
 
 # Execute xcodebuild command (build only)
-echo "Running: xcodebuild clean build -scheme \"${SCHEME}\" -\"${FILETYPE_PARAMETER}\" \"${FILE_TO_BUILD}\""
+echo "Running: xcodebuild clean build -scheme \"${SCHEME}\" -\"${FILETYPE_PARAMETER}\" \"${FILE_TO_BUILD}\" -allowProvisioningUpdates"
 xcodebuild clean build \
     -scheme "${SCHEME}" \
-    -"${FILETYPE_PARAMETER}" "${FILE_TO_BUILD}"
+    -"${FILETYPE_PARAMETER}" "${FILE_TO_BUILD}" \
+    -allowProvisioningUpdates
 
 EXIT_STATUS=$?
 if [ ${EXIT_STATUS} -ne 0 ]; then
