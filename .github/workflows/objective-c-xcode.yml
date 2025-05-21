@@ -2,29 +2,119 @@ name: Xcode - Build and Analyze
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
-    name: Build and analyse default scheme using xcodebuild command
+    name: Build and analyse Xcode project/workspace
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set Default Scheme
+
+      # Optional: Set SCHEME environment variable here if you want to specify a scheme explicitly
+      # Uncomment and set the value, e.g., SCHEME: YourAppSchemeName
+      # env:
+      #   SCHEME:
+
+      - name: Build and Analyze
         run: |
-          scheme_list=$(xcodebuild -list -json | tr -d "\n")
-          default=$(echo $scheme_list | ruby -e "require 'json'; puts JSON.parse(STDIN.gets)['project']['targets'][0]")
-          echo $default | cat >default
-          echo Using default scheme: $default
-      - name: Build
-        env:
-          scheme: ${{ 'default' }}
-        run: |
-          if [ $scheme = default ]; then scheme=$(cat default); fi
-          if [ "`ls -A | grep -i \\.xcworkspace\$`" ]; then filetype_parameter="workspace" && file_to_build="`ls -A | grep -i \\.xcworkspace\$`"; else filetype_parameter="project" && file_to_build="`ls -A | grep -i \\.xcodeproj\$`"; fi
-          file_to_build=`echo $file_to_build | awk '{$1=$1;print}'`
-          xcodebuild clean build analyze -scheme "$scheme" -"$filetype_parameter" "$file_to_build" | xcpretty && exit ${PIPESTATUS[0]}
+          # Find project or workspace file
+          FILE_TO_BUILD=""
+          FILETYPE_PARAMETER=""
+
+          # Check for .xcworkspace first
+          if [[ -n $(find . -maxdepth 1 -name '*.xcworkspace') ]]; then
+            FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcworkspace')
+            FILETYPE_PARAMETER="workspace"
+          # If no workspace, check for .xcodeproj
+          elif [[ -n $(find . -maxdepth 1 -name '*.xcodeproj') ]]; then
+            FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcodeproj')
+            FILETYPE_PARAMETER="project"
+          else
+            echo "Error: No .xcworkspace or .xcodeproj found in the repository root."
+            exit 1
+          fi
+
+          echo "Detected file to build: ${FILE_TO_BUILD} (${FILETYPE_PARAMETER})"
+
+          # Determine Scheme to use
+          # Use SCHEME environment variable if set, otherwise try to auto-detect
+          SCHEME="${SCHEME:-}" # Handles both unset and empty SCHEME
+
+          if [ -z "$SCHEME" ]; then
+            echo "SCHEME environment variable is not set. Attempting to detect schemes..."
+            # Get schemes list using xcodebuild -list
+            SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
+            if [ $? -ne 0 ]; then
+              echo "Error listing schemes from ${FILE_TO_BUILD}."
+              exit 1
+            fi
+
+            # Parse JSON to get schemes list (handle both project and workspace structure)
+            # Prioritize jq if available (common on macOS runners), fallback to ruby
+            if command -v jq &> /dev/null; then
+              # Use jq to extract schemes array and join with space
+              SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
+            else
+              # Use ruby as a fallback
+              SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
+            fi
+
+            if [ -z "$SCHEMES" ]; then
+                echo "Error: No schemes found in ${FILE_TO_BUILD}."
+                echo "Please ensure you have shared schemes configured."
+                exit 1
+            fi
+
+            SCHEME_ARRAY=(${SCHEMES})
+
+            # Check if there is exactly one scheme
+            if [ ${#SCHEME_ARRAY[@]} -eq 1 ]; then
+              SCHEME=${SCHEME_ARRAY[0]}
+              echo "Detected single scheme: ${SCHEME}"
+            else
+              echo "Error: SCHEME environment variable is not set, and there is not exactly one scheme available."
+              echo "Please set the SCHEME environment variable in the workflow env section."
+              echo "Available schemes: ${SCHEMES}"
+              exit 1
+            fi
+          else
+            echo "Using specified SCHEME: ${SCHEME}"
+            # Optional: Validate if the specified scheme actually exists
+            SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
+             if [ $? -ne 0 ]; then
+              echo "Error listing schemes for validation."
+              exit 1
+            fi
+            if command -v jq &> /dev/null; then
+              AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
+            else
+              AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
+            fi
+
+            if [[ ! " ${AVAILABLE_SCHEMES} " =~ " ${SCHEME} " ]]; then
+                echo "Error: Specified scheme '${SCHEME}' does not exist in ${FILE_TO_BUILD}."
+                echo "Available schemes: ${AVAILABLE_SCHEMES}"
+                exit 1
+            fi
+          fi
+
+          # Execute xcodebuild command
+          echo "Running: xcodebuild clean build analyze -scheme \"${SCHEME}\" -\"${FILETYPE_PARAMETER}\" \"${FILE_TO_BUILD}\""
+          xcodebuild clean build analyze \
+            -scheme "${SCHEME}" \
+            -"${FILETYPE_PARAMETER}" "${FILE_TO_BUILD}" \
+            | xcpretty
+
+          # Check the exit status of xcodebuild (the first command in the pipe)
+          EXIT_STATUS=${PIPESTATUS[0]}
+          if [ ${EXIT_STATUS} -ne 0 ]; then
+            echo "xcodebuild command failed with exit status ${EXIT_STATUS}."
+            exit ${EXIT_STATUS}
+          fi
+
+          echo "Build and Analyze completed successfully."
