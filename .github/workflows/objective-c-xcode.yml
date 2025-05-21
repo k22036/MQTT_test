@@ -15,7 +15,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- ここから追加 ---
       - name: Select Xcode Version
         run: |
           # リポジトリを作成/保存したXcodeのバージョンに合わせて、以下のパスを修正してください。
@@ -33,11 +32,6 @@ jobs:
             ls /Applications/Xcode*.app
             exit 1
           fi
-      # --- ここまで追加 ---
-      # Optional: Set SCHEME environment variable here if you want to specify a scheme explicitly
-      # Uncomment and set the value, e.g., SCHEME: YourAppSchemeName
-      # env:
-      #   SCHEME:
 
       - name: Build and Analyze
         run: bash .github/scripts/build_and_analyze.sh

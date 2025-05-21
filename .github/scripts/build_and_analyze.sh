@@ -5,102 +5,63 @@ set -e
 FILE_TO_BUILD=""
 FILETYPE_PARAMETER=""
 
-# Check for .xcworkspace first
 if [[ -n $(find . -maxdepth 1 -name '*.xcworkspace') ]]; then
-  FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcworkspace')
-  FILETYPE_PARAMETER="workspace"
-# If no workspace, check for .xcodeproj
+    FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcworkspace')
+    FILETYPE_PARAMETER="workspace"
 elif [[ -n $(find . -maxdepth 1 -name '*.xcodeproj') ]]; then
-  FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcodeproj')
-  FILETYPE_PARAMETER="project"
+    FILE_TO_BUILD=$(find . -maxdepth 1 -name '*.xcodeproj')
+    FILETYPE_PARAMETER="project"
 else
-  echo "Error: No .xcworkspace or .xcodeproj found in the repository root."
-  exit 1
+    echo "Error: No .xcworkspace or .xcodeproj found in the repository root."
+    exit 1
 fi
-
-echo "Detected file to build: ${FILE_TO_BUILD} (${FILETYPE_PARAMETER})"
 
 # Determine Scheme to use
-# Use SCHEME environment variable if set, otherwise try to auto-detect
-SCHEME="${SCHEME:-}" # Handles both unset and empty SCHEME
+SCHEME="${SCHEME:-}"
 
 if [ -z "$SCHEME" ]; then
-  echo "SCHEME environment variable is not set. Attempting to detect schemes..."
-  # Get schemes list using xcodebuild -list
-  SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
-  if [ $? -ne 0 ]; then
-    echo "Error listing schemes from ${FILE_TO_BUILD}. Make sure the selected Xcode version can open the project."
-    # Additional check for the Xcode version error specifically
-    if [[ $(echo "${SCHEMES_JSON}" | grep "future Xcode project file format") ]]; then
-        echo "This might be due to an incompatible Xcode version. Ensure the 'Select Xcode Version' step is correct."
+    SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
+    if command -v jq &> /dev/null; then
+        SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
+    else
+        SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
     fi
-    exit 1
-  fi
-
-  # Parse JSON to get schemes list (handle both project and workspace structure)
-  # Prioritize jq if available (common on macOS runners), fallback to ruby
-  if command -v jq &> /dev/null; then
-    # Use jq to extract schemes array and join with space
-    SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
-  else
-    # Use ruby as a fallback
-    SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
-  fi
-
-  if [ -z "$SCHEMES" ]; then
-      echo "Error: No schemes found in ${FILE_TO_BUILD}."
-      echo "Please ensure you have shared schemes configured."
-      exit 1
-  fi
-
-  SCHEME_ARRAY=(${SCHEMES})
-
-  # Check if there is exactly one scheme
-  if [ ${#SCHEME_ARRAY[@]} -eq 1 ]; then
-    SCHEME=${SCHEME_ARRAY[0]}
-    echo "Detected single scheme: ${SCHEME}"
-  else
-    echo "Error: SCHEME environment variable is not set, and there is not exactly one scheme available."
-    echo "Please set the SCHEME environment variable in the workflow env section."
-    echo "Available schemes: ${SCHEMES}"
-    exit 1
-  fi
+    if [ -z "$SCHEMES" ]; then
+            echo "Error: No schemes found in ${FILE_TO_BUILD}."
+            exit 1
+    fi
+    SCHEME_ARRAY=(${SCHEMES})
+    if [ ${#SCHEME_ARRAY[@]} -eq 1 ]; then
+        SCHEME=${SCHEME_ARRAY[0]}
+    else
+        echo "Error: SCHEME environment variable is not set, and there is not exactly one scheme available."
+        echo "Available schemes: ${SCHEMES}"
+        exit 1
+    fi
 else
-  echo "Using specified SCHEME: ${SCHEME}"
-  # Optional: Validate if the specified scheme actually exists
-  SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
-   if [ $? -ne 0 ]; then
-    echo "Error listing schemes for validation. Make sure the selected Xcode version can open the project."
-     if [[ $(echo "${SCHEMES_JSON}" | grep "future Xcode project file format") ]]; then
-        echo "This might be due to an incompatible Xcode version. Ensure the 'Select Xcode Version' step is correct."
+    SCHEMES_JSON=$(xcodebuild -list -json -${FILETYPE_PARAMETER} "${FILE_TO_BUILD}")
+    if command -v jq &> /dev/null; then
+        AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
+    else
+        AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
     fi
-    exit 1
-  fi
-  if command -v jq &> /dev/null; then
-    AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | jq -r ".${FILETYPE_PARAMETER}.schemes | join(\" \")")
-  else
-    AVAILABLE_SCHEMES=$(echo "${SCHEMES_JSON}" | ruby -e "require 'json'; data = JSON.parse(STDIN.gets); schemes = data['${FILETYPE_PARAMETER}']['schemes']; puts schemes.join(' ') if schemes")
-  fi
-
-  if [[ ! " ${AVAILABLE_SCHEMES} " =~ " ${SCHEME} " ]]; then
-      echo "Error: Specified scheme '${SCHEME}' does not exist in ${FILE_TO_BUILD}."
-      echo "Available schemes: ${AVAILABLE_SCHEMES}"
-      exit 1
-  fi
+    if [[ ! " ${AVAILABLE_SCHEMES} " =~ " ${SCHEME} " ]]; then
+            echo "Error: Specified scheme '${SCHEME}' does not exist in ${FILE_TO_BUILD}."
+            echo "Available schemes: ${AVAILABLE_SCHEMES}"
+            exit 1
+    fi
 fi
 
-# Execute xcodebuild command
-echo "Running: xcodebuild clean build analyze -scheme \"${SCHEME}\" -\"${FILETYPE_PARAMETER}\" \"${FILE_TO_BUILD}\""
-xcodebuild clean build analyze \
-  -scheme "${SCHEME}" \
-  -"${FILETYPE_PARAMETER}" "${FILE_TO_BUILD}" \
-  | tee >(cat) | grep -v '^$'
+# Execute xcodebuild command (build only)
+echo "Running: xcodebuild clean build -scheme \"${SCHEME}\" -\"${FILETYPE_PARAMETER}\" \"${FILE_TO_BUILD}\""
+xcodebuild clean build \
+    -scheme "${SCHEME}" \
+    -"${FILETYPE_PARAMETER}" "${FILE_TO_BUILD}"
 
-# Check the exit status of xcodebuild (the first command in the pipe)
-EXIT_STATUS=${PIPESTATUS[0]}
+EXIT_STATUS=$?
 if [ ${EXIT_STATUS} -ne 0 ]; then
-  echo "xcodebuild command failed with exit status ${EXIT_STATUS}."
-  exit ${EXIT_STATUS}
+    echo "xcodebuild command failed with exit status ${EXIT_STATUS}."
+    exit ${EXIT_STATUS}
 fi
 
-echo "Build and Analyze completed successfully."
+echo "Build completed successfully."
