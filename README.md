@@ -16,3 +16,8 @@ MQTTプロトコルを使用したメッセージ交換クライアントのiOS�
 - SwiftUI
 - SwiftData
 - MQTT NIO
+
+## version
+
+- Swift 6
+- Xcode 16.3
