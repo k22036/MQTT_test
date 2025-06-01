@@ -13,6 +13,9 @@ struct ContentView: View {
     @Query private var items: [Item]
     
     @StateObject private var mqttClient = MQTT.shared
+    @StateObject private var locationManager = Location()
+    
+    @State private var isSending = false
     
     var body: some View {
         NavigationSplitView {
@@ -28,11 +31,16 @@ struct ContentView: View {
                 .onDelete(perform: deleteItems)
             }
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { isSending.toggle() }) {
+                        Label("Send", systemImage: isSending ? "checkmark.circle.fill" : "plus.circle")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
                 ToolbarItem {
-                    Button(action: send) {
+                    Button(action: { send() }) {
                         Label("send", systemImage: "plus")
                     }
                 }
@@ -50,6 +58,13 @@ struct ContentView: View {
                     modelContext.insert(newItem)
                 }
             }
+            .onChange(of: locationManager.currentLocation) { _, newValue in
+                guard let location = newValue else { return }
+                
+                if isSending {
+                    send(msg: "Location: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+                }
+            }
         } detail: {
             Text("Select an item")
         }
@@ -61,10 +76,10 @@ struct ContentView: View {
         }
     }
     
-    private func send() {
+    private func send(msg: String = "hello") {
         withAnimation {
             do {
-                try mqttClient.publish(message: "hello")
+                try mqttClient.publish(message: msg)
             } catch {
                 print("Error publishing message: \(error)")
             }
@@ -90,7 +105,7 @@ struct ContentView: View {
     }
 }
 
-//#Preview {
-//    ContentView()
-//        .modelContainer(for: Item.self, inMemory: true)
-//}
+#Preview {
+    ContentView()
+        .modelContainer(for: Item.self, inMemory: true)
+}
