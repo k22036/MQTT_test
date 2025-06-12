@@ -77,9 +77,9 @@ struct ContentView: View {
     }
     
     private func send(msg: String = "hello") {
-        withAnimation {
+        Task {
             do {
-                try mqttClient.publish(message: msg)
+                try await mqttClient.publish(message: msg)
             } catch {
                 print("Error publishing message: \(error)")
             }
