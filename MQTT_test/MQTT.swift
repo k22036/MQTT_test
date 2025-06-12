@@ -97,15 +97,11 @@ class MQTT: ObservableObject {
         
         // 既存リスナーを削除して重複登録を防ぐ (Remove existing listener to prevent duplicates)
         let listenerName = "node-to-ios-listener"
-        client.removePublishListener(named: listenerName)
-        client.addPublishListener(named: listenerName) { messageResult in
+        let listener: (Result<MQTTPublishInfo, Error>) -> Void = { messageResult in
             do {
-                let mqttMessage = try messageResult.get() // Extract MQTTMessage from Result
-                
-                // トピック名を確認してから処理 (Check topic name before processing)
+                let mqttMessage = try messageResult.get()
                 if mqttMessage.topicName == topicFilter {
-                    let msg = String(buffer: mqttMessage.payload) // Assumes UTF-8 string payload.
-                    
+                    let msg = String(buffer: mqttMessage.payload)
                     DispatchQueue.main.async {
                         self.receivedMessage = msg
                     }
@@ -115,6 +111,8 @@ class MQTT: ObservableObject {
                 print("Error receiving message: \(error)")
             }
         }
+        client.removePublishListener(named: listenerName)
+        client.addPublishListener(named: listenerName, listener)
     }
     
     func publish(message: String) async throws {
