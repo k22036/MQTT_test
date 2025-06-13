@@ -31,24 +31,30 @@ struct ContentView: View {
                 .onDelete(perform: deleteItems)
             }
             .toolbar {
+                // 位置情報送信モード切替ボタン
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { isSending.toggle() }) {
-                        Label("Send", systemImage: isSending ? "checkmark.circle.fill" : "plus.circle")
+                        Label(isSending ? "位置情報送信中" : "位置情報送信", systemImage: isSending ? "location.fill" : "location")
                     }
+                    .help("位置情報の自動送信をON/OFFします")
                 }
+                // 編集ボタン
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
+                // メッセージ送信ボタン
                 ToolbarItem {
                     Button(action: { send() }) {
-                        Label("send", systemImage: "plus")
+                        Label("メッセージ送信", systemImage: "paperplane")
                     }
+                    .help("MQTTでメッセージを送信します")
                 }
+                // MQTT購読（サブスクライブ）ボタン
                 ToolbarItem {
-                    // sync button
                     Button(action: sync) {
-                        Label("sync", systemImage: "arrow.clockwise")
+                        Label("購読開始", systemImage: "arrow.triangle.2.circlepath")
                     }
+                    .help("MQTTの購読を開始します")
                 }
             }
             .onChange(of: mqttClient.receivedMessage) { _, newValue in
