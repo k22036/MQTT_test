@@ -25,6 +25,15 @@ class MQTT: ObservableObject {
     
     @Published var receivedMessage: String = ""
     
+    // RTT計測用
+    @Published var rttResults: [Double] = [] // ms単位
+    @Published var averageRTT: Double? = nil
+    @Published var rttTestActive = false
+    private var rttTestCount = 0
+    private let rttTestNum = 100
+    private let rttTestMax = 150
+    private var rttSendTimestamps: [String: Date] = [:] // 送信したタイムスタンプと送信時刻の対応
+    
     init(host: String, port: Int, identifier: String) {
         self.host = host
         self.port = port
@@ -82,6 +91,27 @@ class MQTT: ObservableObject {
         }
     }
     
+    // RTT計測開始
+    func startRTTTest() {
+        rttResults = []
+        averageRTT = nil
+        rttTestCount = 0
+        rttTestActive = true
+        rttSendTimestamps = [:]
+        Task {
+            for _ in 0..<rttTestMax {
+                if rttTestCount >= rttTestNum {
+                    break
+                }
+                let now = Date()
+                let timestamp = String(now.timeIntervalSince1970)
+                rttSendTimestamps[timestamp] = now
+                try? await publish(message: "RTTTEST_" + timestamp)
+                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms待機
+            }
+        }
+    }
+    
     func subscribe() async throws {
         let topicFilter = "node-to-ios" // Define for reuse and clarity
         
@@ -104,8 +134,23 @@ class MQTT: ObservableObject {
                     let msg = String(buffer: mqttMessage.payload)
                     DispatchQueue.main.async {
                         self.receivedMessage = msg
+                        // RTT計測用
+                        if msg.hasPrefix("RTTTEST_") {
+                            let sentTimestamp = String(msg.dropFirst("RTTTEST_".count))
+                            if let sentDate = self.rttSendTimestamps[sentTimestamp] {
+                                let rtt = Date().timeIntervalSince(sentDate) * 1000 // ms
+                                self.rttResults.append(rtt)
+                                self.rttTestCount += 1
+                                self.rttSendTimestamps.removeValue(forKey: sentTimestamp)
+                                if self.rttTestCount >= self.rttTestNum {
+                                    self.rttTestActive = false
+                                    self.averageRTT = self.rttResults.reduce(0, +) / Double(self.rttResults.count)
+                                    print("RTT Test completed. Average RTT: \(self.averageRTT ?? 0) ms")
+                                }
+                            }
+                        }
                     }
-                    print("Received message: '\(msg)' on topic '\(mqttMessage.topicName)'")
+                    print("\(self.rttTestCount): Received message: '\(msg)' on topic '\(mqttMessage.topicName)'")
                 }
             } catch {
                 print("Error receiving message: \(error)")
